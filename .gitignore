@@ -35,6 +35,7 @@ target/
 .settings/
 .classpath
 .project
+.cache-main
 
 # NetBeans specific
 nbproject/private/
