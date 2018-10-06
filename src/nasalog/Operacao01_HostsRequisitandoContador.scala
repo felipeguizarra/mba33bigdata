@@ -50,7 +50,8 @@ object Operacao01_HostsRequisitandoContador {
     
     	
     val leituras = spark.readStream
-      .schema(esquema)      
+      .schema(esquema)
+      .option("delimiter", "\t")
     	.csv(diretorio)
     
     // Dataset ?
@@ -60,9 +61,9 @@ object Operacao01_HostsRequisitandoContador {
     // Agrupa pelos hosts que mais fizeram requisições
     val contagens = requisicoes.groupBy("host","requisicao")
         .count
+        .sort($"count".desc)
         .withColumnRenamed("count","requisicoes")
-        .filter(!isnull($"requisicao")) //Adicionando o filter nada aparece, sem filter vem tudo nulo 
-        .orderBy($"host",$"requisicoes".desc)
+        .filter(!isnull($"requisicao") && $"requisicao".contains("GET")) //Adicionando o filter nada aparece, sem filter vem tudo nulo 
         
     val query = contagens.writeStream
       .outputMode(Complete)
