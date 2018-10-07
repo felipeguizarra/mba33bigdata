@@ -10,34 +10,32 @@ import org.apache.spark.sql.Encoder
 import org.apache.spark.sql.streaming.OutputMode._
 import org.apache.spark.sql.streaming.Trigger
 import scala.concurrent.duration._
-
-/* Esta Operação lista as URL's que mais fizeram requisições ao servidor da NASA 
- * É necesário passar o caminho nos argumentos, utilizando Run configurations
+/*
+ * Busca no log e conta as urls mais acessadas 
  */
-
-object Operacao01_HostsRequisitandoContador {
+object Operacao02_UrlMaisAcessadaContador {
   
-  //Classe principal
+   //Classe principal
   def main(args: Array[String]) :Unit = {
     if(args.length < 1){
       System.err.println("É necessário inserir a caminho da pasta nos argumentos de execução!")
       System.exit(1)
-    }
+    }    
     
-    // Jogo o caminho do diretório para variável
+    // Jogo o caminho do diretório para uma variável
     val diretorio : String = args(0)
     
-    Logger.getLogger("org").setLevel(Level.ERROR)
-    
+		Logger.getLogger("org").setLevel(Level.ERROR)
+    		
     val spark = SparkSession
       .builder
       .master("local[*]")      
-      .appName("Operacao01_HostRequisitandoContador")
-      .getOrCreate()
+      .appName("Operacao02_UrlMaisAcessadaContador")
+      .getOrCreate()    
       
     import spark.implicits._
     
-    //Definindo Esquema
+     //Definindo Esquema
     val esquema = StructType(StructField("host", StringType, true) ::
         StructField("timestamp", StringType, true) ::
         StructField("timezone", StringType, true) ::        
@@ -47,33 +45,39 @@ object Operacao01_HostsRequisitandoContador {
         StructField("resposta", StringType, true) ::
         StructField("bytesresposta", StringType, true) :: 
         Nil)
+        
+     val leituras = spark.readStream
+      .schema(esquema)
+      .option("maxFilesPerTrigger", 3) // 3 Arquivos por requisição
+      .option("delimiter", "\t") //para quando as linhas forem divididas em espaço
+    	.csv(diretorio)    	
     
     	
-    val leituras = spark.readStream
-      .schema(esquema)
-      .option("maxFilesPerTrigger", 1) //Um arquivo de cada vez
-      .option("delimiter", "\t") //para quando as linhas forem divididas em espaço
-    	.csv(diretorio)
-    
-    // Dataset
     val requisicoes = leituras
+      .filter(!isnull($"requisicao"))
       .select("host","requisicao").as[HostRequisicao]
-      .filter(!isnull($"requisicao") && $"requisicao".contains("GET"))
     
-    // Conta agrupando pelos hosts que mais fizeram requisições
-    val contagens = requisicoes.groupBy("host")
-        .count
-        .sort($"count".desc)
-        .withColumnRenamed("count","requisicoes")        
-        
-    // Escreve no console
-    val query = contagens.writeStream
+    // Flatmap para retirar apenas o endereço requisitado
+    val urls = requisicoes.flatMap(t => t.requisicao.split(" "))
+    	.filter(l => l.length > 0 && l(0) == '/')
+    	.withColumnRenamed("value","url")
+    
+    // Agrupa por URL	
+    val contagem = urls.groupBy("url")
+    	.count
+    	.sort($"count".desc)
+    	.withColumnRenamed("count","ocorrencias")	
+    
+    //Imprime a contagem no console	
+    val query = contagem.writeStream
       .outputMode(Complete)
+      .trigger(Trigger.ProcessingTime(5.seconds))
       .format("console")
       .start
       
-	  query.awaitTermination()
+	  query.awaitTermination()    
     
   }
+  
   
 }
