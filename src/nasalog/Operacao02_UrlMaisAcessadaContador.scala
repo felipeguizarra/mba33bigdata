@@ -15,7 +15,7 @@ import scala.concurrent.duration._
  */
 object Operacao02_UrlMaisAcessadaContador {
   
-   //Classe principal
+  //Classe principal
   def main(args: Array[String]) :Unit = {
     if(args.length < 1){
       System.err.println("É necessário inserir a caminho da pasta nos argumentos de execução!")
@@ -40,8 +40,8 @@ object Operacao02_UrlMaisAcessadaContador {
         StructField("timestamp", StringType, true) ::
         StructField("timezone", StringType, true) ::        
         StructField("requisicao", StringType, true) ::
-        StructField("pagina", StringType, true) ::
-        StructField("tipo", StringType, true) ::
+//        StructField("pagina", StringType, true) ::
+//        StructField("tipo", StringType, true) ::
         StructField("resposta", StringType, true) ::
         StructField("bytesresposta", StringType, true) :: 
         Nil)

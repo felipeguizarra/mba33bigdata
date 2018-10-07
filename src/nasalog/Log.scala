@@ -1,3 +1,3 @@
 package nasalog
 
-case class Log() 
+case class Log(host:String, resposta: Integer, bytesResposta: Long) 
