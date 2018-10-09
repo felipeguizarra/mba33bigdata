@@ -35,7 +35,7 @@ object Operacao04_JanelaDeTempoLog {
     
      //Definindo Esquema
     val esquema = StructType(StructField("host", StringType, true) ::
-        StructField("timestamp", StringType, true) ::
+        StructField("datahora", StringType, true) ::
         StructField("timezone", StringType, true) ::        
         StructField("requisicao", StringType, true) ::
 //        StructField("pagina", StringType, true) ::
@@ -52,9 +52,18 @@ object Operacao04_JanelaDeTempoLog {
     	
     val requisicoes = leituras
       .filter(!isnull($"requisicao"))      
-      .select($"timestamp", $"timestamp", $"bytesresposta")
+      .select(substring($"datahora", 1, 12) as "data", 
+              substring($"datahora", 14, 21) as "hora", 
+              $"bytesresposta" as "bytesresposta").as[BytesHorasMinutos]
+    
+    // Agrupa por HOST	
+    val somatorio = requisicoes
+      .groupBy("data","hora")
+    	.agg(sum("bytesresposta").as("somatorio_bytesresposta"))
+    	.sort($"somatorio_bytesresposta".desc)
+    
    
-    val query = requisicoes.writeStream
+    val query = somatorio.writeStream
       .outputMode(Complete)
       //.trigger(Trigger.ProcessingTime(5.seconds))
       .format("console")
