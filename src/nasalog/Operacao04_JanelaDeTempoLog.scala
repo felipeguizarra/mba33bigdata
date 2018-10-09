@@ -52,13 +52,13 @@ object Operacao04_JanelaDeTempoLog {
     	
     val requisicoes = leituras
       .filter(!isnull($"requisicao"))      
-      .select(substring($"datahora", 1, 12) as "data", 
+      .select(substring($"datahora", 2, 12) as "data", 
               substring($"datahora", 14, 21) as "hora", 
               $"bytesresposta" as "bytesresposta").as[BytesHorasMinutos]
     
     // Agrupa por HOST	
     val somatorio = requisicoes
-      .groupBy("data","hora")
+      .groupBy("data")
     	.agg(sum("bytesresposta").as("somatorio_bytesresposta"))
     	.sort($"somatorio_bytesresposta".desc)
     
