@@ -45,32 +45,52 @@ object Operacao04_JanelaDeTempoLog {
         Nil)
         
     val leituras = spark.readStream
-      .schema(esquema)
-      .option("maxFilesPerTrigger", 3) // 3 Arquivos por requisição
+      .schema(esquema)      
       .option("delimiter", "\t") //para quando as linhas forem divididas em espaço
     	.csv(diretorio)
     	
     val requisicoes = leituras
       .filter(!isnull($"requisicao"))      
-      .select(substring($"datahora", 2, 12) as "data", 
+      .select(substring($"datahora", 2, 11) as "data", 
               substring($"datahora", 14, 21) as "hora", 
-              $"bytesresposta" as "bytesresposta").as[BytesHorasMinutos]
+              $"bytesresposta" as "bytes").as[DataHoraBytes]
     
-    // Agrupa por HOST	
-    val somatorio = requisicoes
+//     val reqwindow = requisicoes
+//    	.select( unix_timestamp(
+//    	    format_string("%s %s:00", $"data", $"hora")
+//    	    ).cast("timestamp") as "tempo", 
+//    	    $"bytes" as "bytesResposta").as[TimestampResposta]    	
+        
+   	
+    val somatorio = requisicoes//reqwindow   
       .groupBy("data")
-    	.agg(sum("bytesresposta").as("somatorio_bytesresposta"))
+//      .groupBy(
+//    		window($"tempo", "60 minutes", "30 minutes"),
+//    		//window($"tempo", "10 minutes", "5 minutes"),
+//    		$"bytesResposta"
+//    	)
+    	//.count
+    	.agg(sum("bytes").as("somatorio_bytesresposta"))
+    	//.select($"window.start" as "inicio", $"window.end" as "fim", $"somatorio_bytesresposta")
     	.sort($"somatorio_bytesresposta".desc)
+    //  .orderBy($"window")
     
    
     val query = somatorio.writeStream
       .outputMode(Complete)
-      //.trigger(Trigger.ProcessingTime(5.seconds))
+      .trigger(Trigger.ProcessingTime(5.seconds))
       .format("console")
       .start
       
 	  query.awaitTermination()
     
+	  //reqwindow      
+//      .groupBy(
+//    		window($"tempo", "60 minutes", "30 minutes"),
+//    		//window($"tempo", "10 minutes", "5 minutes"),
+//    		$"bytesResposta"
+//    	)
+    	//.count
     
   }
   
