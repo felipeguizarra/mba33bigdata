@@ -73,10 +73,11 @@ object Operacao02_UrlMaisAcessadaContador {
       .outputMode(Complete)
       .trigger(Trigger.ProcessingTime(5.seconds))
       .format("console")
-      .start
-      
-	  query.awaitTermination()    
+      .start	
     
+	
+	  
+      query.awaitTermination()    
   }
   
   

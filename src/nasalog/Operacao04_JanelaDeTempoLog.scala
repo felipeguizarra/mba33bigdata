@@ -53,27 +53,26 @@ object Operacao04_JanelaDeTempoLog {
       .filter(!isnull($"requisicao"))      
       .select(substring($"datahora", 2, 11) as "data", 
               substring($"datahora", 14, 21) as "hora", 
-              $"bytesresposta" as "bytes").as[DataHoraBytes]
+              $"bytesresposta" as "bytes")
     
-//     val reqwindow = requisicoes
-//    	.select( unix_timestamp(
-//    	    format_string("%s %s:00", $"data", $"hora")
-//    	    ).cast("timestamp") as "tempo", 
-//    	    $"bytes" as "bytesResposta").as[TimestampResposta]    	
+     val reqwindow = requisicoes
+    	.select( unix_timestamp(
+    	    format_string("%s %s", $"data", $"hora"), "dd/MM/yyyy HH:mm:ss"
+    	    ).cast("timestamp") as "tempo", 
+    	    $"bytes" as "bytesResposta").as[TimestampResposta]    	
         
    	
-    val somatorio = requisicoes//reqwindow   
-      .groupBy("data")
-//      .groupBy(
-//    		window($"tempo", "60 minutes", "30 minutes"),
-//    		//window($"tempo", "10 minutes", "5 minutes"),
-//    		$"bytesResposta"
-//    	)
+    val somatorio = reqwindow//reqwindow   
+//      .groupBy("data")
+      .groupBy(        
+    		window($"tempo", "60 minutes", "30 minutes")
+//    		//window($"tempo", "10 minutes", "5 minutes"),    		
+    	)
     	//.count
-    	.agg(sum("bytes").as("somatorio_bytesresposta"))
-    	//.select($"window.start" as "inicio", $"window.end" as "fim", $"somatorio_bytesresposta")
-    	.sort($"somatorio_bytesresposta".desc)
-    //  .orderBy($"window")
+    	.agg(sum("bytesResposta").as("somatorio_bytesresposta"))
+    	//.select($"window.start" as "inicio", $bytes)
+    	//.sort($"somatorio_bytesresposta".desc)
+      .orderBy($"window")
     
    
     val query = somatorio.writeStream
