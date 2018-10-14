@@ -59,16 +59,16 @@ object Operacao04_JanelaDeTempoLog {
     	    ).cast("timestamp") as "tempo", 
     	    $"bytes" as "bytesResposta").as[TimestampResposta]    	
           	
-    val somatorio = reqwindow
-      .withWatermark("tempo","5 seconds")
+    val somatorio = reqwindow      
       .groupBy(        
     		window($"tempo", "1 day")
     	)    	
     	.agg(sum("bytesResposta").as("somatorio_bytesresposta"))
     	.select($"window.start" as "inicio", $"window.end" as "fim", $"somatorio_bytesresposta")
     	.sort($"somatorio_bytesresposta".desc)
+    	.limit(30)
 
-    val path = "/home/felipe/eclipse-workspace/trabalhobigdata/src/resultados/janeladetempo"
+    val path = "/home/felipe/eclipse-workspace/trabalhobigdata/src/resultados/byteswindow"
     
     // Escreve em arquivo
     somatorio
