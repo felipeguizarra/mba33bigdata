@@ -13,7 +13,7 @@ import scala.concurrent.duration._
 
 object Operacao03_SomatorioBytesResposta {
   
-   //Classe principal
+   //Método principal
   def main(args: Array[String]) :Unit = {
     if(args.length < 1){
       System.err.println("É necessário inserir a caminho da pasta nos argumentos de execução!")
@@ -21,51 +21,82 @@ object Operacao03_SomatorioBytesResposta {
     }
     
      // Jogo o caminho do diretório para uma variável
-    val diretorio : String = args(0)
+    val diretorioJuly : String = args(0)
+    val diretorioAug : String = args(1)
     
 		Logger.getLogger("org").setLevel(Level.ERROR)
     		
     val spark = SparkSession
       .builder
       .master("local[*]")      
-      .appName("Operacao02_UrlMaisAcessadaContador")
+      .appName("Operacao03_SomatorioBytesResposta")
       .getOrCreate()    
       
     import spark.implicits._
     
      //Definindo Esquema
-    val esquema = StructType(StructField("host", StringType, true) ::
-        StructField("timestamp", StringType, true) ::
-        StructField("timezone", StringType, true) ::        
-        StructField("requisicao", StringType, true) ::
-//        StructField("pagina", StringType, true) ::
-//        StructField("tipo", StringType, true) ::
-        StructField("resposta", IntegerType, true) ::
-        StructField("bytesresposta", LongType, true) :: 
-        Nil)
+        val esquema = StructType(StructField("host", StringType, true) ::
+      StructField("traco1", StringType, true) ::
+      StructField("traco2", StringType, true) ::
+      StructField("datahora", StringType, true) ::
+      StructField("timezone", StringType, true) ::
+      StructField("requisicao", StringType, true) ::
+      StructField("resposta", IntegerType, true) ::
+      StructField("bytes", LongType, true) :: Nil)
         
-     val leituras = spark.readStream
+     val leiturasJuly = spark.read
       .schema(esquema)
-      .option("delimiter", "\t") //para quando as linhas forem divididas em espaço
-    	.csv(diretorio)
+      .option("delimiter", " ") //para quando as linhas forem divididas em espaço
+    	.csv(diretorioJuly)
     	
-    val logInfo = leituras
+    val leiturasAug = spark.read
+      .schema(esquema)
+      .option("delimiter", " ") //para quando as linhas forem divididas em espaço
+    	.csv(diretorioAug)
+    	
+    val logInfoJuly = leiturasJuly
       .filter(!isnull($"host"))
-      .select("host", "resposta","bytesresposta").as[Log]
-        
+      .select($"host", $"resposta", $"bytes" as "bytesResposta").as[Log]
     
-    // Agrupa por HOST	
-    val somatorio = logInfo
-    	.agg(sum("bytesresposta").as("somatorio_bytesresposta"))
-    	.sort($"somatorio_bytesresposta".desc)
+    val logInfoAug = leiturasAug
+      .filter(!isnull($"host"))
+      .select($"host", $"resposta", $"bytes" as "bytesResposta").as[Log]
+    
+    // Soma os bytes por diretório
+    val somatorioJuly = logInfoJuly
+    	.agg(sum("bytesresposta").as("somatorio_bytesresposta_julho95"))
+    	
+    	
+    // Soma os bytes por diretório2
+    val somatorioAug = logInfoAug
+    	.agg(sum("bytesresposta").as("somatorio_bytesresposta_agosto95"))    	
+    	
+    somatorioJuly.show
+    somatorioAug.show
+    
+    val pathJul = "/home/felipe/eclipse-workspace/trabalhobigdata/src/resultados/somatorioJuly"
+    val pathAug = "/home/felipe/eclipse-workspace/trabalhobigdata/src/resultados/somatorioAug"
+    
+    somatorioJuly
+      .write
+      .option("delimiter", " ")
+      .option("header", "true")
+      .csv(pathJul)
+      
+    somatorioAug
+      .write
+      .option("delimiter", " ")
+      .option("header", "true")
+      .csv(pathAug)
+      
     
     //Imprime a contagem no console	
-    val query = somatorio.writeStream
+    /*val query = somatorioJuly.writeStream
       .outputMode(Complete)
       .format("console")
       .start
       
-	  query.awaitTermination()
+	  query.awaitTermination()*/
 	  
 	  //Tentei usar parquet mas, não rolou
     //    logInfo.write.mode("overwrite").parquet("log.parquet")
